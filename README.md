@@ -172,8 +172,9 @@ No public port forwarding is required. Do not expose the unauthenticated Yun
 dashboard directly to the public internet.
 
 Older Dragino OpenWrt firmware may require the legacy
-`diffie-hellman-group14-sha1` SSH key exchange. The supplied Windows installer
-enables that compatibility algorithm only for its SSH/SCP commands.
+`diffie-hellman-group14-sha1` SSH key exchange and `hmac-sha1` MAC. The
+supplied Windows installer enables those compatibility algorithms only for
+its SSH/SCP commands.
 
 ## GitHub and Group Workflow
 

@@ -13,6 +13,7 @@ $InstallDirectory = "/tmp/workout-install"
 $SshOptions = @(
     "-o", "ConnectTimeout=15",
     "-o", "KexAlgorithms=+diffie-hellman-group14-sha1",
+    "-o", "MACs=+hmac-sha1,hmac-md5",
     "-o", "HostKeyAlgorithms=+ssh-rsa",
     "-o", "PubkeyAcceptedAlgorithms=+ssh-rsa"
 )
