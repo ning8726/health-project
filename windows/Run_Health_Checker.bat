@@ -20,5 +20,8 @@ if errorlevel 1 (
   )
 )
 
-py -3 "%~dp0check_health.py" --usb
+set "VIEWER_ARGS="
+if /i "%~1"=="--phone" set "VIEWER_ARGS=--host 0.0.0.0"
+
+py -3 "%~dp0check_health.py" --usb %VIEWER_ARGS%
 if errorlevel 1 pause

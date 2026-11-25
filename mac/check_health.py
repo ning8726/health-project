@@ -7,6 +7,7 @@ import json
 import math
 from pathlib import Path
 import signal
+import socket
 import sys
 import threading
 import time
@@ -87,6 +88,21 @@ def run_demo(state, stopping):
         state.accept(json.dumps(demo_packet(seq, now - began)), now)
         state.message = 'SIMULATED DATA - no hardware connected'
         stopping.wait(0.75)
+
+
+def local_ipv4():
+    """Return the LAN address without sending any network payload."""
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(('8.8.8.8', 80))
+        return probe.getsockname()[0]
+    except OSError:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except OSError:
+            return '127.0.0.1'
+    finally:
+        probe.close()
 
 
 def run_windows_usb(device, state, stopping):
@@ -184,6 +200,9 @@ def main(argv=None):
     group.add_argument('--wifi', metavar='URL', help='http://YOUR_YUN_IP/workout/latest.json')
     group.add_argument('--demo', action='store_true', help='Explicitly simulated interface check')
     parser.add_argument('--list-ports', action='store_true')
+    parser.add_argument(
+        '--host', default='127.0.0.1',
+        help='Listening address; use 0.0.0.0 to view from a phone on the same network')
     parser.add_argument('--port', type=int, default=8770, help='Local browser server port')
     parser.add_argument('--no-browser', action='store_true')
     args = parser.parse_args(argv)
@@ -229,12 +248,15 @@ def main(argv=None):
                         'publisher': lambda *_: None})
     handler = functools.partial(Handler, state=state, mode=mode, source=source)
     try:
-        server = http.server.ThreadingHTTPServer(('127.0.0.1', args.port), handler)
+        server = http.server.ThreadingHTTPServer((args.host, args.port), handler)
     except OSError as error:
         parser.error('Cannot start local server: %s; try --port 8771' % error)
     worker.start()
-    url = 'http://127.0.0.1:%d/' % server.server_address[1]
+    port = server.server_address[1]
+    url = 'http://127.0.0.1:%d/' % port
     print('Health checker:', url)
+    if args.host not in ('127.0.0.1', 'localhost', '::1'):
+        print('Phone URL (same Wi-Fi): http://%s:%d/' % (local_ipv4(), port))
     print('Mode:', mode, '|', source)
     print('Keep this window open. Press Control-C to stop.')
     if not args.no_browser:

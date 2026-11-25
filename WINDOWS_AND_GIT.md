@@ -73,6 +73,42 @@ py -3 mac\check_health.py --demo
 
 页面会明确显示 `SIMULATED DATA`，这些不是传感器读数。
 
+### 用手机查看
+
+让手机和 Windows 电脑连接同一个 Wi-Fi，然后双击：
+
+`windows/Run_Phone_Viewer.bat`
+
+命令窗口会打印类似下面的地址：
+
+```text
+Phone URL (same Wi-Fi): http://192.168.1.25:8770/
+```
+
+在手机浏览器输入这个完整地址。不要使用 `127.0.0.1`，它只代表手机自己。
+Windows 防火墙第一次询问时，只允许“专用网络”。公共校园 Wi-Fi 可能禁止
+设备互相访问，这种情况下改用手机热点，让电脑连接该热点。
+
+### 手机和电脑不在同一个网络
+
+不要直接把 8770 端口映射到公网。推荐在 Windows 和手机上安装 Tailscale，
+并在两台设备登录同一个 Tailscale 账号。电脑继续运行
+`windows/Run_Phone_Viewer.bat`，然后在电脑 PowerShell 中运行：
+
+```powershell
+tailscale ip -4
+```
+
+假设结果显示 `100.80.20.10`，手机浏览器访问：
+
+```text
+http://100.80.20.10:8770/
+```
+
+Tailscale 会在两台设备之间建立加密的私有连接，不需要路由器端口转发。
+Yun 的 `/workout/` 页面同样可以只通过 Tailscale 或 Yun 本身的局域网访问。
+公网临时链接服务会暴露实时数据，这个项目默认不提供公网发布。
+
 ## 4. 从 Windows 安装 Yun Wi-Fi 页面
 
 Windows 10/11 通常已经带有 `ssh` 和 `scp`。在项目目录打开 PowerShell：
