@@ -10,11 +10,17 @@ if ($YunHost -notmatch '^[A-Za-z0-9.:-]+$') {
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $Remote = "root@$YunHost"
 $InstallDirectory = "/tmp/workout-install"
+$SshOptions = @(
+    "-o", "ConnectTimeout=15",
+    "-o", "KexAlgorithms=+diffie-hellman-group14-sha1",
+    "-o", "HostKeyAlgorithms=+ssh-rsa",
+    "-o", "PubkeyAcceptedAlgorithms=+ssh-rsa"
+)
 
-& ssh $Remote "mkdir -p $InstallDirectory"
+& ssh @SshOptions $Remote "mkdir -p $InstallDirectory"
 if ($LASTEXITCODE -ne 0) { throw "Could not connect to the Yun by SSH." }
 
-& scp -O `
+& scp @SshOptions -O `
     (Join-Path $ProjectRoot "yun\collector.py") `
     (Join-Path $ProjectRoot "yun\index.html") `
     (Join-Path $ProjectRoot "yun\workout-monitor.init") `

@@ -117,6 +117,10 @@ Windows 10/11 通常已经带有 `ssh` 和 `scp`。在项目目录打开 PowerSh
 powershell -ExecutionPolicy Bypass -File .\windows\install_to_yun.ps1 -YunHost 192.168.240.1
 ```
 
+旧版 Dragino OpenWrt 固件可能只支持 `diffie-hellman-group14-sha1`。
+Windows 安装脚本已经显式启用与该旧 Yun 通信所需的兼容选项；这些选项
+只作用于连接到 Yun 的本次 SSH/SCP 命令。
+
 把 `192.168.240.1` 换成 Yun 当前 IP。SSH 会提示输入 Yun 的 root 密码。
 安装后手机访问：
 
