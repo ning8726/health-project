@@ -29,6 +29,7 @@ Git commands.
 | `windows/Run_Health_Checker.bat` | Double-click Windows USB checker |
 | `windows/install_to_yun.ps1` | Windows PowerShell Yun installer |
 | `WINDOWS_AND_GIT.md` | Windows setup and Git/GitHub workflow |
+| `GITHUB_GROUP.md` | Create a repository and invite group collaborators |
 | `VALIDATION.md` | What was checked, and the hardware checks still needed |
 
 ## 1. Wire the components
