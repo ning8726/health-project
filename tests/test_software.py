@@ -22,7 +22,7 @@ class SoftwareTests(unittest.TestCase):
 
     def test_protocol_and_strict_numbers(self):
         p=self.packet();self.assertTrue(collector.validate(p))
-        for address in (0x38,0x53,0x1d):
+        for address in (0x38,0x53,0x1d,0x68):
             q=copy.deepcopy(p);q['motion']['address']=address
             self.assertTrue(collector.validate(q))
         q=copy.deepcopy(p);q['motion']['address']=0x70

@@ -28,6 +28,27 @@ struct MockBmaBus {
  int available(){return rxCount-rxPos;}
  int read(){return rxPos<rxCount?rx[rxPos++]:-1;}
 };
+struct MockBmxBus {
+ uint8_t target=0,reg=0,tx[8]={},txCount=0,rx[16]={},rxPos=0,rxCount=0;
+ uint8_t regs[128]={};
+ void beginTransmission(uint8_t a){target=a;txCount=0;}
+ void write(uint8_t b){if(txCount<sizeof(tx))tx[txCount++]=b;}
+ uint8_t endTransmission(bool stop=true){
+   (void)stop;
+   if(target!=0x68||!txCount)return 2;
+   reg=tx[0];
+   if(txCount>1)regs[tx[0]]=tx[1];
+   return 0;
+ }
+ uint8_t requestFrom(uint8_t a,uint8_t n){
+   if(a!=0x68||n>sizeof(rx))return 0;
+   rxCount=n;rxPos=0;
+   for(uint8_t i=0;i<n;++i)rx[i]=regs[(uint8_t(reg+i))&127];
+   return n;
+ }
+ int available(){return rxCount-rxPos;}
+ int read(){return rxPos<rxCount?rx[rxPos++]:-1;}
+};
 void holdPose(Engine &e,uint32_t start,uint32_t duration,bool target){
  for(uint32_t t=0;t<=duration;t+=40)e.update(start+t,true,true,target?90:0,target?0:90,90);
 }
@@ -85,12 +106,24 @@ int main(int argc,char **argv){
  assert(bma.x>0.99f&&bma.x<1.01f);
  assert(bma.y< -0.99f&&bma.y> -1.01f);
  assert(bma.z> -0.01f&&bma.z<0.01f);
+ MockBmxBus bmxBus;
+ bmxBus.regs[0x00]=0xd8;bmxBus.regs[0x03]=0x10;
+ bmxBus.regs[0x12]=0x00;bmxBus.regs[0x13]=0x40;
+ bmxBus.regs[0x14]=0x00;bmxBus.regs[0x15]=0xc0;
+ bmxBus.regs[0x16]=0x00;bmxBus.regs[0x17]=0x00;
+ Bmx160<MockBmxBus> bmx(bmxBus);
+ assert(bmx.begin()&&bmx.address==0x68);
+ assert(bmxBus.regs[0x40]==0x28&&bmxBus.regs[0x41]==0x03&&bmxBus.regs[0x7e]==0x11);
+ mockMicros+=50000;assert(bmx.poll(millis()));
+ assert(bmx.x>0.99f&&bmx.x<1.01f);
+ assert(bmx.y< -0.99f&&bmx.y> -1.01f);
+ assert(bmx.z> -0.01f&&bmx.z<0.01f);
  oled.bigLine(6,"123456789012345678901234567890");
  oled.bigLine(7,"OUTSIDE SCREEN");
  char text[24];decimalText(text,sizeof(text),-1.234f,3);assert(std::string(text)=="-1.234");
  decimalText(text,sizeof(text),78.25f,1);assert(std::string(text)=="78.3");
  decimalText(text,sizeof(text),NAN,1);assert(std::string(text)=="null");
  std::cout<<"PASS: complete/partial reps, dwell, data loss, pause, timeout, goal, pose span, "
-             "page cycling and rollover, pose calibration, BMA150 decoding, "
+             "page cycling and rollover, pose calibration, BMA150/BMX160 decoding, "
              "framebuffer bounds, decimal encoding.\n";
 }

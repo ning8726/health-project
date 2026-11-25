@@ -4,13 +4,15 @@ Windows update:
 
 - The sketch compiled for `arduino:renesas_uno:minima` with Arduino UNO R4
   Boards 1.6.0 and SparkFun MAX3010x library 1.1.2.
-- A host mock tested BMA150 chip-ID detection, `CSB`-selected address `0x38`,
-  protected configuration bits, and 10-bit signed acceleration decoding.
+- A host mock tested BMA150 and BMX160 chip-ID detection, `CSB`-selected
+  addresses, configuration, and signed acceleration decoding.
+- The physical BMX160 responded at address `0x68` with chip ID `0xD8`; live
+  X/Y/Z acceleration reached the Windows dashboard.
 - The Windows checker served the dashboard and JSON through `127.0.0.1`;
   `pyserial` port enumeration worked.
 - The Windows batch launcher and PowerShell Yun installer passed syntax checks.
-- BMA150 physical I2C timing, the 7-pin module's pull-ups, and actual readings
-  have not been tested on the hardware in this workspace.
+- BMX160 tilt calibration and repeated movement sessions still require the
+  user's normal physical test.
 
 Software checks completed in the available Linux workspace:
 

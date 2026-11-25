@@ -451,7 +451,7 @@ private:
 // ===== Accelerometer.h =====
 #include <Arduino.h>
 
-// Supports ADXL345 and the BMA150 used by the 7-pin CSB/INT1/INT2 breakout.
+// Supports ADXL345, BMA150, and BMX160 accelerometers.
 // Both use the separate ADC-sensed, open-drain bus on A2/A3.
 template<typename Bus>
 class Adxl345 {
@@ -566,7 +566,67 @@ class Bma150 {
   }
   bool readBytes(uint8_t reg,uint8_t *p,uint8_t n){
     bus.beginTransmission(address);bus.write(uint8_t(reg<<1));
-    if(bus.endTransmission(false)!=0)return false;
+    // BMA150 requires a STOP before the read START, unlike ADXL345.
+    if(bus.endTransmission(true)!=0)return false;
+    if(bus.requestFrom(address,n)!=n){while(bus.available())bus.read();return false;}
+    for(uint8_t i=0;i<n;++i)p[i]=uint8_t(bus.read());
+    return true;
+  }
+};
+
+// BMX160 uses the BMI160 primary I2C register map. The common 7-pin
+// VCC/GND/SCL/SDA/CSB/INT1/INT2 breakout responds at fixed address 0x68.
+template<typename Bus>
+class Bmx160 {
+ public:
+  explicit Bmx160(Bus &b):bus(b){}
+  bool ready=false,hasSample=false;
+  uint8_t address=0;
+  float x=0,y=0,z=0;
+  uint32_t sampledAt=0;
+  static constexpr uint8_t I2C_ADDRESS=0x68;
+
+  bool begin() {
+    ready=false;hasSample=false;address=0;
+    address=I2C_ADDRESS;
+    uint8_t id=0;
+    if(!readBytes(0x00,&id,1) || id!=0xd8){address=0;return false;}
+    // 100 Hz normal-mode accelerometer, +/-2g.
+    if(!write8(0x40,0x28) || !write8(0x41,0x03)){address=0;return false;}
+    if(!write8(0x7e,0x11)){address=0;return false;}
+    delay(5);
+    uint8_t pmu=0;
+    if(!readBytes(0x03,&pmu,1) || ((pmu>>4)&3)!=1){address=0;return false;}
+    ready=true;lastPoll=millis();lastData=lastPoll;return true;
+  }
+
+  bool poll(uint32_t now) {
+    if(!ready || uint32_t(now-lastPoll)<40)return false;
+    lastPoll=now;uint8_t data[6];
+    if(!readBytes(0x12,data,6)){fail();return false;}
+    x=decode(data)*0.00006103515625f;
+    y=decode(data+2)*0.00006103515625f;
+    z=decode(data+4)*0.00006103515625f;
+    sampledAt=millis();lastData=sampledAt;hasSample=true;return true;
+  }
+
+  bool fresh(uint32_t now)const{return ready && hasSample && uint32_t(now-sampledAt)<300;}
+
+ private:
+  Bus &bus;
+  uint32_t lastPoll=0,lastData=0;
+  void fail(){ready=false;hasSample=false;}
+  static int16_t decode(const uint8_t *p) {
+    uint16_t u=uint16_t(p[0])|(uint16_t(p[1])<<8);
+    return u<32768?int16_t(u):int16_t(int32_t(u)-65536);
+  }
+  bool write8(uint8_t reg,uint8_t value){
+    bus.beginTransmission(address);bus.write(reg);bus.write(value);
+    return bus.endTransmission()==0;
+  }
+  bool readBytes(uint8_t reg,uint8_t *p,uint8_t n){
+    bus.beginTransmission(address);bus.write(reg);
+    if(bus.endTransmission(true)!=0)return false;
     if(bus.requestFrom(address,n)!=n){while(bus.available())bus.read();return false;}
     for(uint8_t i=0;i<n;++i)p[i]=uint8_t(bus.read());
     return true;
@@ -576,8 +636,8 @@ class Bma150 {
 template<typename Bus>
 class Accelerometer {
  public:
-  enum Kind:uint8_t {NONE,ADXL345,BMA150};
-  explicit Accelerometer(Bus &b):adxl(b),bma(b){}
+  enum Kind:uint8_t {NONE,ADXL345,BMA150,BMX160};
+  explicit Accelerometer(Bus &b):adxl(b),bma(b),bmx(b){}
   bool ready=false,hasSample=false;
   uint8_t address=0;
   float x=0,y=0,z=0;
@@ -588,6 +648,7 @@ class Accelerometer {
     kind=NONE;
     if(adxl.begin())kind=ADXL345;
     else if(bma.begin())kind=BMA150;
+    else if(bmx.begin())kind=BMX160;
     copyFromSource();
     return kind!=NONE;
   }
@@ -595,16 +656,19 @@ class Accelerometer {
     bool got=false;
     if(kind==ADXL345)got=adxl.poll(now);
     else if(kind==BMA150)got=bma.poll(now);
+    else if(kind==BMX160)got=bmx.poll(now);
     copyFromSource();
     return got;
   }
   bool fresh(uint32_t now)const{
-    return kind==ADXL345?adxl.fresh(now):kind==BMA150?bma.fresh(now):false;
+    return kind==ADXL345?adxl.fresh(now):kind==BMA150?bma.fresh(now):
+      kind==BMX160?bmx.fresh(now):false;
   }
 
  private:
   Adxl345<Bus> adxl;
   Bma150<Bus> bma;
+  Bmx160<Bus> bmx;
   void copyFromSource() {
     if(kind==ADXL345){
       ready=adxl.ready;hasSample=adxl.hasSample;address=adxl.address;
@@ -612,6 +676,9 @@ class Accelerometer {
     }else if(kind==BMA150){
       ready=bma.ready;hasSample=bma.hasSample;address=bma.address;
       x=bma.x;y=bma.y;z=bma.z;sampledAt=bma.sampledAt;
+    }else if(kind==BMX160){
+      ready=bmx.ready;hasSample=bmx.hasSample;address=bmx.address;
+      x=bmx.x;y=bmx.y;z=bmx.z;sampledAt=bmx.sampledAt;
     }else{
       ready=hasSample=false;address=0;sampledAt=0;
     }

@@ -7,8 +7,8 @@ The ultrasonic sensor is removed. The finger sensor stays attached, and the
 accelerometer stays on the moving forearm.
 
 The code and wiring target the hardware we previously selected: UNO R4 Minima,
-Dragino Yun shield, sensor shield, a MAX3010x heart-rate breakout, ADXL345 or
-BMA150,
+Dragino Yun shield, sensor shield, a MAX3010x heart-rate breakout, ADXL345,
+BMA150 or BMX160,
 Grove/digital touch sensor, and a 128x64 SSD1306/SSD1315-compatible I2C OLED.
 Your photos do not establish every sensor pin label or voltage rating. Confirm
 the actual labels before wiring. This is not firmware for an ESP32, ESP8266,
@@ -62,6 +62,12 @@ locations of the pins on your shield. Use the printed pin names.
 | **BMA150** breakout | SCL | A3 |
 | **BMA150** breakout | CSB | 3V3 (selects I2C) |
 | **BMA150** breakout | INT1 / INT2 | Unconnected |
+| **BMX160** breakout | VCC | **3V3 only** |
+| **BMX160** breakout | GND | GND |
+| **BMX160** breakout | SDA | A2 |
+| **BMX160** breakout | SCL | A3 |
+| **BMX160** breakout | CSB | 3V3 (selects I2C) |
+| **BMX160** breakout | INT1 / INT2 | Unconnected |
 | Touch sensor | VCC | 5V |
 | Touch sensor | GND | GND |
 | Touch sensor | SIG / OUT | D5 |
@@ -75,9 +81,9 @@ UNO's labelled 3V3 pin rather than an unchecked shield VCC socket.
 
 The three I2C pairs are separate: **A0/A1, A2/A3, and A4/A5 must not be joined**.
 Use short, secure leads and the breakout modules' existing low-voltage pull-ups.
-The common 7-pin BMA150 module has no exposed SDO pin; that is expected. Its
-fixed I2C address is `0x38`. Connect `CSB` to 3V3 and leave `INT1`/`INT2`
-unconnected.
+The common 7-pin BMA150 and BMX160 modules have no exposed SDO pin; that is
+expected. Their fixed I2C addresses are `0x38` and `0x68` respectively. Connect
+`CSB` to 3V3 and leave `INT1`/`INT2` unconnected.
 The sketch never drives these signal pins HIGH and never enables 5 V pull-ups;
 it reads their HIGH level with the R4 ADC. This retains the previous prototype
 approach without a separate level-shifter board. If a module lacks pull-ups,
@@ -111,11 +117,12 @@ this through its own regulator. Do not connect 3.3 V directly to a bare 1.8 V VD
 4. Select **Arduino UNO R4 Minima** and the UNO USB port. Verify and upload.
 5. Close Arduino IDE Serial Monitor before starting the local checker.
 
-The included drivers handle the ADXL345, BMA150 and the OLED. SparkFun's `heartRate.h`
+The included drivers handle the ADXL345, BMA150, BMX160 and the OLED. SparkFun's `heartRate.h`
 provides the optical beat-detection algorithm. The heart driver checks the
 part ID and supports the MAX30100 or MAX30102/05 family at address 0x57;
 the ADXL345 must report device ID 0xE5 at 0x53 or 0x1D. The BMA150 must report
-chip ID 0x02 at fixed address 0x38.
+chip ID 0x02 at fixed address 0x38. The BMX160 must report chip ID 0xD8 at
+address 0x68.
 
 ### What the OLED displays
 
@@ -235,7 +242,7 @@ accelerometer's orientation relative to gravity. It cannot reliably count a pure
 translation with unchanged orientation, or rotation around gravity.
 The reported tilt is not an elbow-joint angle.
 
-1. Secure the ADXL345 or BMA150 so it does not slide. Attach the finger holder with light,
+1. Secure the ADXL345, BMA150 or BMX160 so it does not slide. Attach the finger holder with light,
    comfortable contact. Leave cable slack around the wrist.
 2. Tap and release the touch pad to enter setup.
 3. Hold the start pose still for about one second. Tap to save it.
@@ -277,7 +284,7 @@ diagnosis, fatigue assessment, or clinically validated movement assessment.
 | OLED blank | Use only one screen; VCC rating, GND, SDA A4, SCL A5; SSD1306-compatible 128x64 controller |
 | Heart sensor missing | Breakout VIN rating, GND, SDA A0, SCL A1; module part ID and onboard pull-ups |
 | No pulse number yet | Light finger contact; hold still; inspect raw IR and acquisition status |
-| Accelerometer missing | ADXL345: CS high, SDO grounded. BMA150: CSB high, no SDO pin. Both: 3V3, GND, SDA A2, SCL A3 |
+| Accelerometer missing | ADXL345: CS high, SDO grounded. BMA150/BMX160: CSB high, no SDO pin. All: 3V3, GND, SDA A2, SCL A3 |
 | Tilt blank | Save the start pose and hold still; check fresh data |
 | Reps stay at zero | Save distinct poses, wait at each endpoint, use a movement that changes sensor tilt |
 | Windows/macOS cannot open USB | Close Serial Monitor; use a data cable; use `--list-ports` and specify COM/USB port |
@@ -306,6 +313,7 @@ hardware and must not be presented as measurements from your project.
 - Arduino board setup: https://docs.arduino.cc/tutorials/uno-r4-minima/minima-getting-started/
 - Dragino Yun manual: https://www.dragino.com/downloads/downloads/YunShield/YUN_SHIELD_USER_MANUAL_v1.0.pdf
 - BMA150 datasheet: https://media.digikey.com/pdf/Data%20Sheets/Bosch/BMA150.pdf
+- BMX160/BMI160 register interface: https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmi160-ds000.pdf
 - MAX30102 datasheet: https://www.analog.com/media/en/technical-documentation/data-sheets/max30102.pdf
 - ADXL345 datasheet: https://www.analog.com/media/en/technical-documentation/data-sheets/ADXL345.pdf
 - Accelerometer inclination: https://www.analog.com/en/resources/app-notes/an-1057.html

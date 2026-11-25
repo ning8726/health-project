@@ -3,15 +3,15 @@
 这个项目现在可以在 Windows 上上传程序、通过 USB 查看数据，并通过本机
 OpenSSH 安装 Yun Wi-Fi 页面。原来的 macOS 和 Yun 用法仍然保留。
 
-## 1. BMA150 加速度计接线
+## 1. BMX160 加速度计接线
 
-照片中的模块是 7 针 BMA150：
+照片中的模块是 7 针 BMX160：
 
 `VCC`、`GND`、`SCL`、`SDA`、`CSB`、`INT1`、`INT2`
 
-它没有 `SDO` 是正常的。当前固件同时支持 ADXL345 和 BMA150。
+它没有 `SDO` 是正常的。当前固件同时支持 ADXL345、BMA150 和 BMX160。
 
-| BMA150 模块 | UNO R4 Minima |
+| BMX160 模块 | UNO R4 Minima |
 |---|---|
 | VCC | 3.3V |
 | GND | GND |
@@ -20,8 +20,9 @@ OpenSSH 安装 Yun Wi-Fi 页面。原来的 macOS 和 Yun 用法仍然保留。
 | CSB | 3.3V |
 | INT1、INT2 | 不接 |
 
-不要接 5V。BMA150 的 I2C 地址固定为 `0x38`，把 `CSB` 拉高即可选择 I2C。
-接好后，OLED 第 3 页应显示倾斜角，而不是 `-- DEG`。
+不要接 5V。BMX160 的 I2C 地址为 `0x68`，把 `CSB` 拉高即可选择 I2C；
+芯片 ID 应为 `0xD8`。接好后，OLED 第 3 页应显示倾斜角，而不是
+`-- DEG`。
 
 ## 2. 在 Windows 上传 Arduino 程序
 
@@ -136,7 +137,7 @@ git diff
 
 ```powershell
 git add R4_Health/R4_Health.ino
-git commit -m "Add BMA150 accelerometer support"
+git commit -m "Add BMX160 accelerometer support"
 git push
 ```
 

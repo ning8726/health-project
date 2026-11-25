@@ -92,7 +92,8 @@ def validate(m):
     a = m.get('motion')
     if not isinstance(a, dict) or not isinstance(a.get('found'), bool) or not isinstance(a.get('fresh'), bool):
         return False
-    if a.get('address') not in (0, 0x38, 0x53, 0x1d) or not integer(a.get('feedback'), 0, 11):
+    if a.get('address') not in (0, 0x38, 0x53, 0x1d, 0x68) or not integer(
+            a.get('feedback'), 0, 11):
         return False
     for k in ('x_g', 'y_g', 'z_g'):
         if not number(a.get(k), -4, 4):
