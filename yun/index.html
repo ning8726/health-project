@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Health project | Live checker</title>
+<!--LOCAL_CONFIG-->
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#173444;background:#f0f5f4;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:auto;padding:32px 22px 45px}
+header{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:22px}h1{font-size:30px;margin:4px 0}h2{font-size:17px;margin:0 0 18px}p{line-height:1.5}.eyebrow{color:#16756d;font-size:12px;letter-spacing:.14em;font-weight:700}.muted{color:#617983;font-size:14px}
+.badge{display:inline-block;background:#dee8e5;border-radius:20px;padding:8px 13px;font-size:13px;font-weight:650}.good{background:#d7eee1;color:#195c3c}.bad{background:#fae6d8;color:#85451b}
+.banner{padding:14px 18px;background:#fff0c4;border:1px solid #d4a927;border-radius:12px;margin-bottom:18px;font-weight:700}.hidden{display:none}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card,.panel{background:white;border:1px solid #d8e4e0;border-radius:17px;padding:22px;box-shadow:0 4px 16px #17344405}.label{font-size:13px;color:#557079}.value{font-size:48px;font-weight:720;letter-spacing:-.04em;line-height:1.15;margin:10px 0}.unit{font-size:18px;font-weight:500;letter-spacing:0;color:#6b8188}.hint{font-size:13px;min-height:38px;line-height:1.45;color:#617983}
+.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-top:16px}.panel{margin:0}.row{display:flex;align-items:center;justify-content:space-between;gap:15px;border-bottom:1px solid #edf2ef;padding:10px 0;font-size:14px}.row:last-child{border:0}.row span:first-child{color:#607982}.row span:last-child{text-align:right;overflow-wrap:anywhere}.progress{height:7px;border-radius:5px;background:#edf3ef;overflow:hidden;margin:12px 0}.progress span{height:100%;display:block;background:#25857c;width:0;transition:width .3s}
+.oled{background:#10252b;border:5px solid #dce6e1;border-radius:9px;min-height:146px;padding:18px;color:#c0f6ed;font:15px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-line}.oled strong{font-size:27px}.actions{margin-top:15px;font-size:13px;color:#607982;line-height:1.6}svg{width:100%;height:145px;margin-top:10px;background:#f6f9f7;border-radius:8px}.axis{font-size:10px;fill:#7f9397}.detail{margin-top:16px}summary{cursor:pointer;font-size:14px}pre{background:#10252b;color:#c5eee6;border-radius:12px;padding:18px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,Menlo,monospace}.footer{font-size:12px;color:#607982;line-height:1.6;margin-top:20px}.notice{padding:10px 13px;background:#f1f6f3;border-radius:8px;font-size:13px;margin-top:15px}
+@media(max-width:720px){main{padding:20px 14px}.cards,.grid{grid-template-columns:1fr}header{align-items:flex-start}h1{font-size:25px}.value{font-size:42px}.hint{min-height:0}}
+</style>
+</head>
+<body><main>
+<header><div><div class="eyebrow">HEALTH / EXERCISE PROJECT</div><h1>Live sensor checker</h1><div class="muted" id="source">Waiting for Arduino or Yún data</div></div><span class="badge bad" id="link">Waiting</span></header>
+<div id="demo" class="banner hidden">SIMULATED DATA — no sensors are connected. This checks the interface only.</div>
+<div class="cards">
+<section class="card"><div class="label">Estimated heart rate</div><div class="value"><span id="bpm">--</span> <span class="unit">BPM</span></div><div class="hint" id="heart">Waiting for a usable pulse signal</div></section>
+<section class="card"><div class="label">Completed repetitions</div><div class="value"><span id="reps">--</span><span class="unit"> / <span id="goal">--</span></span></div><div class="progress"><span id="progress"></span></div><div class="hint" id="prompt">Save start and target poses using the touch pad.</div></section>
+<section class="card"><div class="label">Stationary tilt from start pose</div><div class="value"><span id="tilt">--</span><span class="unit"> °</span></div><div class="hint" id="movement">Hold the arm still to obtain a tilt estimate.</div></section>
+</div>
+<div class="grid">
+<section class="panel"><h2>Connection and sensors</h2>
+<div class="row"><span>Session</span><span id="state">Waiting</span></div>
+<div class="row"><span>Heart sensor</span><span id="heartfound">Waiting</span></div>
+<div class="row"><span>ADXL345</span><span id="accelfound">Waiting</span></div>
+<div class="row"><span>OLED</span><span id="oledfound">Waiting</span></div>
+<div class="row"><span>Acceleration X / Y / Z</span><span id="axes">--</span></div>
+<div class="row"><span>Last rep / reference</span><span id="timing">--</span></div>
+<div class="row"><span>Packets / rejected</span><span id="packets">0 / 0</span></div>
+<div class="row"><span>Collector status</span><span id="status">Starting</span></div>
+</section>
+<section class="panel"><h2>OLED page reported by Arduino</h2><div class="oled"><div id="page">Waiting for a packet</div><strong id="pagevalue">--</strong><div id="pagenote">Heart rate → reps → movement</div></div>
+<div class="actions">The OLED cycles every 4 seconds. During calibration it stays on the setup page.<br>Tap the touch pad to set up, save a pose, start, or pause/resume. Hold it for 2 seconds to reset.</div>
+<div class="notice">Counted movements must change the sensor’s orientation relative to gravity. The ultrasonic sensor is not used.</div>
+</section>
+</div>
+<section class="panel detail"><h2>Recent estimated pulse readings</h2><div class="muted">A blank section means no usable or current reading. Values are not filled in automatically.</div><svg viewBox="0 0 900 145" role="img" aria-label="Recent estimated heart-rate readings"><line x1="40" y1="115" x2="890" y2="115" stroke="#dae5df"/><text x="8" y="25" class="axis" id="chartmax">--</text><text x="8" y="117" class="axis" id="chartmin">--</text><path id="trace" fill="none" stroke="#21867a" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/></svg></section>
+<details class="detail"><summary>Last received packet and wiring diagnostics</summary><pre id="raw">No packets yet.</pre></details>
+<div class="footer">Prototype estimates for this engineering project. Movement can disturb optical pulse readings. No SpO₂, diagnosis, fatigue assessment, or verified exercise-form score is provided. Missing or stale live values are shown as “--”.</div>
+</main>
+<script>
+'use strict';
+const endpoint=window.healthEndpoint||'latest.json';
+const states=['Idle','Save start pose','Save target pose','Ready','Running','Paused','Set complete'];
+const movement=['ADXL data missing','Save both poses','Hold still, then tap','First usable rep becomes reference','Reference saved','Similar to reference','Faster than reference','Slower than reference','More abrupt movement','Endpoint orientation differs','Movement data incomplete','Pause at each endpoint'];
+const phases=['Follow the saved movement','Go to the start pose','Reach the target pose','Return to the start pose','Check accelerometer connection','Move more slowly','Need at least 25° between poses','Hold still, then tap','Movement timed out; return to start'];
+const $=id=>document.getElementById(id), set=(id,v)=>{$(id).textContent=v;};
+let lastKey='', lastNew=0, history=[], lastGraphKey='', lastUptime=0;
+function fmt(v,d=0){return typeof v==='number'&&Number.isFinite(v)?v.toFixed(d):'--';}
+function chart(){
+ const nums=history.filter(v=>typeof v==='number');
+ if(!nums.length){$('trace').setAttribute('d','');set('chartmax','--');set('chartmin','--');return;}
+ const lo=Math.floor(Math.min(...nums)/10)*10-5, hi=Math.max(lo+20,Math.ceil(Math.max(...nums)/10)*10+5);
+ let d='', lifting=true;
+ history.forEach((v,i)=>{if(typeof v!=='number'){lifting=true;return;}let x=40+i*850/Math.max(1,history.length-1), y=115-(v-lo)/(hi-lo)*100;d+=(lifting?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';lifting=false;});
+ $('trace').setAttribute('d',d);set('chartmax',String(hi));set('chartmin',String(lo));
+}
+function render(s){
+ const key=String(s.seq)+':'+String(s.uptime_ms);
+ if(s.link===true&&typeof s.seq==='number'&&key!==lastKey){lastKey=key;lastNew=Date.now();}
+ const live=s.link===true&&lastNew>0&&Date.now()-lastNew<4500;
+ $('link').className='badge '+(live?'good':'bad');set('link',live?'Receiving':'No live data');
+ $('demo').classList.toggle('hidden',!(s.simulated===true||s.mode==='demo'));
+ set('source',s.source||(s.usb_port?'Yún USB: '+s.usb_port:'Yún Wi-Fi dashboard'));
+ const a=s.motion||{};
+ set('bpm',live?fmt(s.bpm):'--');set('heart',live?(s.pulse_motion_warning?'Movement may affect this pulse estimate. Hold still.':s.heart_status||'Waiting for pulse'):'Waiting for current Arduino data');
+ set('reps',live?String(s.reps):'--');set('goal',live?String(s.goal):'--');
+ $('progress').style.width=live?Math.min(100,s.reps/s.goal*100)+'%':'0%';
+ let prompt=phases[s.feedback]||'Follow the touch-pad prompts';
+ if(s.state===0)prompt='Tap the touch pad to begin setup.';
+ if(s.state===1)prompt='Hold start pose still, then tap.';
+ if(s.state===2)prompt=s.feedback===6?phases[6]:'Hold target pose still, then tap.';
+ if(s.state===3)prompt='Tap to start the set.';
+ if(s.state===5)prompt='Tap to resume.';
+ if(s.state===6)prompt='Set complete. Tap for the next set.';
+ set('prompt',live?prompt:'Save start and target poses using the touch pad.');
+ set('tilt',live&&a.fresh?fmt(a.tilt_deg):'--');set('movement',live?(movement[a.feedback]||'Waiting for movement data'):'Waiting for current movement data');
+ set('state',live?(states[s.state]||'Unknown'):'No live data');
+ set('heartfound',live?(s.heart_found?s.chip:'Not detected'):'Waiting');
+ set('accelfound',live?(a.found?(a.fresh?'Detected; fresh data':'Detected; data missing'):'Not detected'):'Waiting');
+ set('oledfound',live?(s.display_found?'Detected at 0x'+Number(s.display_address).toString(16).toUpperCase():'Not detected'):'Waiting');
+ set('axes',live&&a.fresh?[a.x_g,a.y_g,a.z_g].map(v=>fmt(v,2)).join(' / ')+' g':'--');
+ set('timing',live?fmt(a.last_rep_ms/1000,1)+' s / '+fmt(a.reference_ms/1000,1)+' s':'--');
+ set('packets',String(s.packets||0)+' / '+String(s.bad_packets||0));set('status',s.collector_status||'Waiting');
+ const page=live?s.page:-1;
+ set('page',page===0?'HEART RATE  1/3':page===1?'REPETITIONS  2/3':page===2?'MOVEMENT  3/3':'Waiting for Arduino');
+ set('pagevalue',page===0?fmt(s.bpm)+' BPM':page===1?s.reps+'/'+s.goal:page===2?fmt(a.tilt_deg)+' DEG':'--');
+ set('pagenote',live?(page===1?prompt:page===2?(movement[a.feedback]||'Hold still'):s.heart_status):'Heart rate → reps → movement');
+ if(live&&key!==lastGraphKey){
+  if(typeof s.uptime_ms==='number'&&s.uptime_ms<lastUptime)history=[];
+  lastUptime=s.uptime_ms||0;lastGraphKey=key;history.push(typeof s.bpm==='number'?s.bpm:null);
+  if(history.length>60)history.shift();chart();
+ }
+ set('raw',JSON.stringify(s,null,2));
+}
+async function poll(){
+ const abort=new AbortController(), timer=setTimeout(()=>abort.abort(),3500);
+ try{const response=await fetch(endpoint+'?t='+Date.now(),{cache:'no-store',signal:abort.signal});if(!response.ok)throw new Error('HTTP '+response.status);render(await response.json());}
+ catch(error){render({link:false,collector_status:'Cannot read data: '+error.message});}
+ finally{clearTimeout(timer);setTimeout(poll,800);}
+}
+poll();
+</script></body></html>

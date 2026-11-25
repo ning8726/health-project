@@ -1,0 +1,24 @@
+#!/bin/sh /etc/rc.common
+START=95
+STOP=10
+
+start() {
+    mkdir -p /tmp/workout
+    /usr/bin/python /root/workout-monitor/collector.py --daemon
+}
+
+stop() {
+    # Verify the process command line before signalling a saved PID.
+    if [ -r /var/run/workout-usb.pid ]; then
+        pid="$(cat /var/run/workout-usb.pid)"
+        case "$pid" in ''|*[!0-9]*) return 0 ;; esac
+        if [ -r "/proc/$pid/cmdline" ] && tr '\000' ' ' < "/proc/$pid/cmdline" | grep -q '/root/workout-monitor/collector.py'; then
+            kill "$pid"
+            count=0
+            while kill -0 "$pid" 2>/dev/null && [ "$count" -lt 5 ]; do
+                sleep 1
+                count=$((count + 1))
+            done
+        fi
+    fi
+}
